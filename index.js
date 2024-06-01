@@ -17,21 +17,6 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-const verifyToken = async (req, res, next) => {
-  const token = req.cookies?.token;
-  console.log(token);
-  if (!token) {
-    return res.status(401).send({ message: "unauthorized access" });
-  }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      console.log(err);
-      return res.status(401).send({ message: "unauthorized access" });
-    }
-    req.user = decoded;
-    next();
-  });
-};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster12.5dhxjyi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster12`;
 
@@ -50,53 +35,76 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
     const usersCollection = client.db("assetFlow").collection("users");
-    const hrCollection = client.db("assetFlow").collection("Hr");
-
-    // auth related api
-    app.post("/jwt", async (req, res) => {
-      const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "30d",
-      });
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-        })
-        .send({ success: true });
-    });
+    
+    const verifyToken = (req,res,next) => {
+      console.log('inside verifyToken',req.headers);
+      if(!req.headers.authorization){
+        res.status(403).send({message:'Forbidden Access'})
+      }
+      const token = req.headers.authorization.split(' ')[1]
+      console.log('inside veryfiy token barear',token);
+      jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(error,decode)=>{
+        if(error){
+          return res.status(403).send({message:'Forbidden Access'})
+        }
+        req.decode = decode
+        next()
+      })
+    }
+    // jwt
+    app.post('/jwt',async(req,res)=>{
+      const userInfo = req.body
+      const token = jwt.sign(userInfo,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
+      res.send({token})
+    })
 
     // logout 
-    app.get("/logout", async (req, res) => {
-        try {
-          res
-            .clearCookie("token", {
-              maxAge: 0,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-            })
-            .send({ success: true });
-        } catch (err) {
-          res.status(500).send(err);
-        }
-      });
+    // app.get("/logout", async (req, res) => {
+    //     try {
+    //       res
+    //         .clearCookie("token", {
+    //           maxAge: 0,
+    //           secure: process.env.NODE_ENV === "production",
+    //           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    //         })
+    //         .send({ success: true });
+    //     } catch (err) {
+    //       res.status(500).send(err);
+    //     }
+    //   });
 
     // save a hr in data base
-    app.put('/hrmanager',async(req,res)=> {
-      const hr = req.body;
-      const option = {upsert:true};
+    // app.put('/hrmanager',async(req,res)=> {
+    //   const hr = req.body;
+    //   const option = {upsert:true};
+    //   const query = {
+    //     email:hr?.email
+    //   }
+    //   const isExist = await hrCollection.findOne(query)
+    //   if(isExist){
+    //     return isExist
+    //   }
+    //   else{
+    //     const result = await hrCollection.insertOne(hr)
+    //     res.send(result)
+    //   }
+    // })
+
+    // hr get
+    app.get('/hrmanager/:email',async(req,res)=>{
+      const email = req.params.email;
+      // if(email !== req.decode.email){
+      //   return res.status(403).send({message:'Unauthorized Access'})
+      // }
       const query = {
-        email:hr?.email
+        email:email
       }
-      const isExist = await hrCollection.findOne(query)
-      if(isExist){
-        return isExist
+      const hr = await usersCollection.findOne(query)
+      let hrRole = false
+      if(hr){
+        hrRole = hr?.role === 'hr'
       }
-      else{
-        const result = await hrCollection.insertOne(hr)
-        res.send(result)
-      }
+      res.send({hrRole})
     })
 
     // save a user in data base
