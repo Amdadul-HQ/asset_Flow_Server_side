@@ -101,10 +101,13 @@ async function run() {
       }
       const hr = await usersCollection.findOne(query)
       let hrRole = false
+      let employeeRole = false
       if(hr){
         hrRole = hr?.role === 'hr'
+        employeeRole = hr?.role === 'employee'
       }
-      res.send({hrRole})
+      console.log(hrRole,employeeRole);
+      res.send({hrRole,employeeRole})
     })
 
     // save a user in data base
