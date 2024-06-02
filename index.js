@@ -66,7 +66,26 @@ async function run() {
       res.send(result) 
     })
 
+    // geting requested asset 
+    app.get('/requestedasset/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        'assetHolder.email':email,
+        status:'Requested',
+      }
+      const result = await requestAssetCollection.find(query).toArray()
+      res.send(result)
+    })
 
+    // geting asset for the employee
+    app.get('/assetsofemploye/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email:email,
+      }
+      const result = await requestAssetCollection.find(query).toArray()
+      res.send(result)
+    })
 
     // post a user into a company
     app.post('/addtocompany',async(req,res)=>{
