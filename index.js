@@ -77,7 +77,7 @@ async function run() {
       const result = await companyCollection.insertOne(employeeDetails)
       res.send({result,updateUser})
     })
-    // companyName APi
+    // company emplyeee APi
     app.get('/companyemployee/:email',async(req,res)=>{
       const email = req.params.email;
       const query = {
@@ -86,6 +86,15 @@ async function run() {
       const result = await companyCollection.find(query).toArray()
       res.send(result)
     })
+    //remove from company 
+    app.delete('/employee/:id',async(req,res)=>{
+      const id = req.params.id
+      const query ={
+        _id: new ObjectId(id)
+      }
+      const result = await companyCollection.deleteOne(query)
+      res.send(result)
+    }) 
 
     // get a user single data 
     app.get('/userdetails/:email',async(req,res)=>{
