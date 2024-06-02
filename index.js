@@ -35,6 +35,7 @@ async function run() {
     // Send a ping to confirm a successful connection
     const usersCollection = client.db("assetFlow").collection("users");
     const assetsCollection = client.db("assetFlow").collection("assets");
+    const companyCollection = client.db("assetFlow").collection("company");
     
     const verifyToken = (req,res,next) => {
       console.log('inside verifyToken',req.headers);
@@ -56,6 +57,44 @@ async function run() {
       const userInfo = req.body
       const token = jwt.sign(userInfo,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
       res.send({token})
+    })
+    // post a user into a company
+    app.post('/addtocompany',async(req,res)=>{
+      const employeeDetails = req.body
+      const id = employeeDetails?._id;
+      const hremail = employeeDetails?.hremail;
+      const query = {
+        _id: ObjectId.createFromHexString(id),
+      };
+      const updateEmployee = {
+        $set:{
+          role:'employee',
+          status:'in Job',
+          hremail:hremail,
+        }
+      }
+      const updateUser = await usersCollection.updateOne(query,updateEmployee)
+      const result = await companyCollection.insertOne(employeeDetails)
+      res.send({result,updateUser})
+    })
+    // companyName APi
+    app.get('/companyemployee/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        hremail:email,
+      }
+      const result = await companyCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // get a user single data 
+    app.get('/userdetails/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query ={
+        email:email
+      }
+      const result = await usersCollection.findOne(query)
+      res.send(result)
     })
 
     // save an asset in database
@@ -105,6 +144,14 @@ async function run() {
         }
       }
       const result = await assetsCollection.updateOne(query,updateDoc)
+      res.send(result)
+    })
+    // geting normal user
+    app.get('/users',async(req,res)=>{
+      const query = {
+        role:'user'
+      }
+      const result = await usersCollection.find(query).toArray()
       res.send(result)
     })
 
