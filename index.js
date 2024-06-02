@@ -35,6 +35,7 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
     const usersCollection = client.db("assetFlow").collection("users");
+    const assetsCollection = client.db("assetFlow").collection("assets");
     
     const verifyToken = (req,res,next) => {
       console.log('inside verifyToken',req.headers);
@@ -56,6 +57,22 @@ async function run() {
       const userInfo = req.body
       const token = jwt.sign(userInfo,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
       res.send({token})
+    })
+
+    // save an asset in database
+    app.post('/addasset',async(req,res)=> {
+      const asset = req.body;
+      const result = await assetsCollection.insertOne(asset)
+      res.send(result)
+    })
+    // get assets from database
+    app.get('/assets/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        "assetHolder.email":email
+      } 
+      const result = await assetsCollection.find(query).toArray()
+      res.send(result)
     })
 
     // logout 
@@ -106,7 +123,6 @@ async function run() {
         hrRole = hr?.role === 'hr'
         employeeRole = hr?.role === 'employee'
       }
-      console.log(hrRole,employeeRole);
       res.send({hrRole,employeeRole})
     })
 
