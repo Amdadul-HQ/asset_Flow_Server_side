@@ -1,15 +1,14 @@
 require("dotenv").config();
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const cookieParser = require("cookie-parser");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const app = express();
 
 const corsOptions = {
   origin: ["http://localhost:5173", "http://localhost:5174"],
-  credentials: true,
   optionSuccessStatus: 200,
 };
 
@@ -76,11 +75,36 @@ async function run() {
     })
     // asset delete 
     app.delete('/asset/:id',async(req,res)=> {
+      const id = req.params.id;
+      console.log(id);
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const result = await assetsCollection.deleteOne(query)
+      res.send(result)
+    })
+    // update asset api
+    app.get('/asset/:id',async(req,res)=> {
       const id = req.params.id
       const query = {
-        _id :new ObjectId(id)
+        _id: new ObjectId(id),
+      };
+      const result = await assetsCollection.findOne(query)
+      res.send(result)
+    })
+    app.patch('/updateasset/:id',async(req,res)=>{
+      const id = req.params.id
+      const query = {
+        _id : new ObjectId(id)
       }
-      const result = await assetsCollection.deleteOne(query)
+      const updateAsset = req.body
+      console.log(updateAsset);
+      const updateDoc= {
+        $set:{
+          ...updateAsset
+        }
+      }
+      const result = await assetsCollection.updateOne(query,updateDoc)
       res.send(result)
     })
 
