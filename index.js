@@ -36,6 +36,7 @@ async function run() {
     const usersCollection = client.db("assetFlow").collection("users");
     const assetsCollection = client.db("assetFlow").collection("assets");
     const companyCollection = client.db("assetFlow").collection("company");
+    const requestAssetCollection = client.db("assetFlow").collection("requestedAsset");
     
     const verifyToken = (req,res,next) => {
       console.log('inside verifyToken',req.headers);
@@ -58,6 +59,15 @@ async function run() {
       const token = jwt.sign(userInfo,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
       res.send({token})
     })
+    // post on requested Asset
+    app.post('/requestasset',async(req,res)=>{
+      const requestAsset = req.body;
+      const result = await requestAssetCollection.insertOne(requestAsset)
+      res.send(result) 
+    })
+
+
+
     // post a user into a company
     app.post('/addtocompany',async(req,res)=>{
       const employeeDetails = req.body
@@ -86,14 +96,27 @@ async function run() {
       const result = await companyCollection.find(query).toArray()
       res.send(result)
     })
+
     //remove from company 
     app.delete('/employee/:id',async(req,res)=>{
       const id = req.params.id
-      const query ={
-        _id: new ObjectId(id)
+  
+      const filter = {
+       _id : new ObjectId(id)
       }
+      const query ={
+        _id: id
+      }
+      const updateDoc = {
+        $set:{
+          role:'user',
+          status:'Available',
+        },
+      }
+      const user = await usersCollection.updateOne(filter,updateDoc)
       const result = await companyCollection.deleteOne(query)
-      res.send(result)
+
+      res.send({result})
     }) 
 
     // get a user single data 
