@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const cookieParser = require("cookie-parser");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const app = express();
 
@@ -72,6 +72,15 @@ async function run() {
         "assetHolder.email":email
       } 
       const result = await assetsCollection.find(query).toArray()
+      res.send(result)
+    })
+    // asset delete 
+    app.delete('/asset/:id',async(req,res)=> {
+      const id = req.params.id
+      const query = {
+        _id :new ObjectId(id)
+      }
+      const result = await assetsCollection.deleteOne(query)
       res.send(result)
     })
 
