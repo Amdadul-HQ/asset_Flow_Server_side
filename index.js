@@ -37,6 +37,8 @@ async function run() {
     const assetsCollection = client.db("assetFlow").collection("assets");
     const companyCollection = client.db("assetFlow").collection("company");
     const requestAssetCollection = client.db("assetFlow").collection("requestedAsset");
+    const monthlyAssetRequestCollection = client.db("assetFlow").collection("monthlyAssetRequest");
+    const paymentsCollection = client.db("assetFlow").collection("payments");
     
     const verifyToken = (req,res,next) => {
       console.log('inside verifyToken',req.headers);
@@ -59,11 +61,30 @@ async function run() {
       const token = jwt.sign(userInfo,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'})
       res.send({token})
     })
+    // save payment data
+    app.post('/payment',async(req,res)=>{
+      const paymentDetails = req.body
+      const result = await paymentsCollection.insertOne(paymentDetails)
+      res.send(result)
+    })
+
     // post on requested Asset
     app.post('/requestasset',async(req,res)=>{
       const requestAsset = req.body;
+      const requestAssetOnly = await monthlyAssetRequestCollection.insertOne(requestAsset)
       const result = await requestAssetCollection.insertOne(requestAsset)
       res.send(result) 
+    })
+    // only month request asset
+    app.get('/monthrequestasset/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email:email,
+        requestMonth:new Date().getMonth(),
+        requestYear:new Date().getFullYear(),
+      }
+      const result = await monthlyAssetRequestCollection.find(query).toArray()
+      res.send(result)
     })
 
     // geting requested asset 
@@ -90,12 +111,25 @@ async function run() {
 
     // geting asset for the employee
     app.get('/assetsofemploye/:email',async(req,res)=>{
+      const search = req.query.search
       const email = req.params.email;
-      const query = {
-        email:email,
+      console.log(search);
+      let query = {}
+      if(search){
+        query = {
+          email:email,
+          productName:{$regex:search , $options:'i'},
+        }
+        const result = await requestAssetCollection.find(query).toArray()
+        return res.send(result)
       }
-      const result = await requestAssetCollection.find(query).toArray()
-      res.send(result)
+      else{
+        query = { 
+          email:email
+        }
+        const result = await requestAssetCollection.find(query).toArray()
+        res.send(result)
+      }
     })
 
     // deleting asste for employee
