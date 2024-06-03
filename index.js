@@ -77,6 +77,17 @@ async function run() {
       res.send(result)
     })
 
+    // geting pending request as employee
+    app.get('/pendingasset/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email:email,
+        status:'Requested',
+      }
+      const result = await requestAssetCollection.find(query).toArray()
+      res.send(result)
+    })
+
     // geting asset for the employee
     app.get('/assetsofemploye/:email',async(req,res)=>{
       const email = req.params.email;
@@ -84,6 +95,71 @@ async function run() {
         email:email,
       }
       const result = await requestAssetCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // deleting asste for employee
+    app.delete('/assetsofemploye/:id',async(req,res)=>{
+      const id = req.params.id
+      const query = {
+        _id: id
+      }
+      const result = await requestAssetCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // return asset api
+    app.delete('/returnasset/:id',async(req,res)=>{
+      const id = req.params.id
+      const filter = {
+        _id:new ObjectId(id)
+      }
+      const query = {
+        _id: id
+      }
+      const updataDoc = {
+        $inc: { productQuantity: 1 }
+      }
+      const updataMainAsset = await assetsCollection.updateOne(filter,updataDoc)
+      const result = await requestAssetCollection.deleteOne(query)
+      res.send({result,updataMainAsset})
+    })
+
+    // accept asset request as hr
+    app.patch('/acceptasset/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {
+        _id:id
+      }
+      const filter = {
+        _id : new ObjectId(id)
+      }
+      const updataDoc = {
+        $set:{
+          status:'Approve',
+          approvalDate: new Date()
+        },
+        $inc: { productQuantity: -1 }
+      }
+      const updateForMainAsset = {
+        $inc: { productQuantity: -1 }
+      }
+      const resultMainAsset = await assetsCollection.updateOne(filter,updateForMainAsset)
+      const result = await requestAssetCollection.updateOne(query,updataDoc)
+      res.send(result)
+    })
+    // Reject reuest as hr
+    app.patch('/rejectasset/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {
+        _id:id
+      }
+      const updataDoc = {
+        $set:{
+          status:'Rejected',
+        }
+      }
+      const result = await requestAssetCollection.updateOne(query,updataDoc)
       res.send(result)
     })
 
@@ -188,7 +264,6 @@ async function run() {
         _id : new ObjectId(id)
       }
       const updateAsset = req.body
-      console.log(updateAsset);
       const updateDoc= {
         $set:{
           ...updateAsset
