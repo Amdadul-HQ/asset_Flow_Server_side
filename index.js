@@ -63,12 +63,35 @@ async function run() {
       res.send({token})
     })
     // save payment data
-    app.post('/payment',async(req,res)=>{
-      const paymentDetails = req.body
-      const result = await paymentsCollection.insertOne(paymentDetails)
+    app.post('/payments',async(req,res)=>{
+      const paymentDetails = req.body;
+      const email = paymentDetails.email
+      const packageName = paymentDetails.name
+      const query = {
+        email:email
+      }
+      const updataDoc = {
+        $set:{
+          packageName
+        }
+      }
+      const result = await usersCollection.updateOne(query,updataDoc)
       res.send(result)
     })
-    
+    // package 
+    app.get('/package/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email:email
+      }
+      const hrdetails = await usersCollection.findOne(query)
+      const package = hrdetails?.packageName
+      res.send(package)
+    })
+
+
+
+
     app.post("/create-payment-intent", async (req, res) => {
       const price = req.body.price;
       const priecInCent = parseFloat(price * 100)
