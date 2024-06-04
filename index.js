@@ -261,6 +261,9 @@ async function run() {
       const hremail = employeeDetails?.hremail;
       const companyName = employeeDetails?.companyName;
       const companyLogoUrl = employeeDetails?.companyLogoUrl
+      const filter = {
+        email:hremail
+      }
       const query = {
         _id: ObjectId.createFromHexString(id),
       };
@@ -273,6 +276,10 @@ async function run() {
           companyLogoUrl:companyLogoUrl
         }
       }
+      const updateHr = {
+        $inc:{teamMember:1}
+      }
+      const updateHrProfile = await usersCollection.updateOne(filter,updateHr)
       const updateUser = await usersCollection.updateOne(query,updateEmployee)
       const result = await companyCollection.insertOne(employeeDetails)
       res.send({result,updateUser})
@@ -290,7 +297,7 @@ async function run() {
     //remove from company 
     app.delete('/employee/:id',async(req,res)=>{
       const id = req.params.id
-  
+      console.log(req.body);
       const filter = {
        _id : new ObjectId(id)
       }
@@ -303,11 +310,22 @@ async function run() {
           status:'Available',
         },
       }
+
       const user = await usersCollection.updateOne(filter,updateDoc)
       const result = await companyCollection.deleteOne(query)
-
       res.send({result})
-    }) 
+    })
+    app.patch('/updateteamcount/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email:email
+      }
+      const updateDoc = {
+        $inc:{teamMember:-1}
+      }
+      const result = await usersCollection.updateOne(query,updateDoc)
+      res.send(result)
+    })
 
     // get a user single data 
     app.get('/userdetails/:email',async(req,res)=>{
