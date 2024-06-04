@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
+const stripe = require("stripe")(process.env.STRIPE_SK_KEY);
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const cookieParser = require("cookie-parser");
@@ -67,13 +68,41 @@ async function run() {
       const result = await paymentsCollection.insertOne(paymentDetails)
       res.send(result)
     })
+    
+    app.post("/create-payment-intent", async (req, res) => {
+      const price = req.body.price;
+      const priecInCent = parseFloat(price * 100)
+      if(!price || priecInCent < 1){
+        return
+      }
+      // Generate client secret
+      const {client_secret} = await stripe.paymentIntents.create({
+        amount: priecInCent,
+        currency: "usd",
+        // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      // send a client secret in response
+      res.send({clientSecret : client_secret})
+    });
+
 
     // post on requested Asset
     app.post('/requestasset',async(req,res)=>{
       const requestAsset = req.body;
+      const id = requestAsset.key;
+      const query = {
+        _id:new ObjectId(id)
+      }
+      const updataDoc = {
+        $inc:{requestCount:1}
+      }
+      const updateMainCollection = await assetsCollection.updateOne(query,updataDoc)
       const requestAssetOnly = await monthlyAssetRequestCollection.insertOne(requestAsset)
       const result = await requestAssetCollection.insertOne(requestAsset)
-      res.send(result) 
+      res.send(result)
     })
     // only month request asset
     app.get('/monthrequestasset/:email',async(req,res)=>{
@@ -132,11 +161,11 @@ async function run() {
       }
     })
 
-    // deleting asste for employee
+    // deleting asset as employee
     app.delete('/assetsofemploye/:id',async(req,res)=>{
       const id = req.params.id
       const query = {
-        _id: id
+        _id: new ObjectId(id)
       }
       const result = await requestAssetCollection.deleteOne(query)
       res.send(result)
@@ -149,10 +178,11 @@ async function run() {
         _id:new ObjectId(id)
       }
       const query = {
-        _id: id
+        _id: new ObjectId(id)
       }
       const updataDoc = {
-        $inc: { productQuantity: 1 }
+        $inc: { productQuantity: 1 ,
+         }
       }
       const updataMainAsset = await assetsCollection.updateOne(filter,updataDoc)
       const result = await requestAssetCollection.deleteOne(query)
@@ -176,7 +206,9 @@ async function run() {
         $inc: { productQuantity: -1 }
       }
       const updateForMainAsset = {
-        $inc: { productQuantity: -1 }
+        $inc: { productQuantity: -1,
+          requestCount: -1
+         }
       }
       const resultMainAsset = await assetsCollection.updateOne(filter,updateForMainAsset)
       const result = await requestAssetCollection.updateOne(query,updataDoc)
@@ -197,11 +229,15 @@ async function run() {
       res.send(result)
     })
 
+ 
+
     // post a user into a company
     app.post('/addtocompany',async(req,res)=>{
       const employeeDetails = req.body
       const id = employeeDetails?._id;
       const hremail = employeeDetails?.hremail;
+      const companyName = employeeDetails?.companyName;
+      const companyLogoUrl = employeeDetails?.companyLogoUrl
       const query = {
         _id: ObjectId.createFromHexString(id),
       };
@@ -210,6 +246,8 @@ async function run() {
           role:'employee',
           status:'in Job',
           hremail:hremail,
+          companyName:companyName,
+          companyLogoUrl:companyLogoUrl
         }
       }
       const updateUser = await usersCollection.updateOne(query,updateEmployee)
