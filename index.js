@@ -165,8 +165,11 @@ async function run() {
     app.get('/assetsofemploye/:email',async(req,res)=>{
       const search = req.query.search
       const email = req.params.email;
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
       console.log(search);
       let query = {}
+      
       if(search){
         query = {
           email:email,
@@ -179,10 +182,11 @@ async function run() {
         query = { 
           email:email
         }
-        const result = await requestAssetCollection.find(query).toArray()
+        const result = await requestAssetCollection.find(query).skip(size * page).limit(size).toArray()
         res.send(result)
       }
     })
+  
 
     // deleting asset as employee
     app.delete('/assetsofemploye/:id',async(req,res)=>{
@@ -194,11 +198,13 @@ async function run() {
       res.send(result)
     })
 
-    // return asset api
-    app.delete('/returnasset/:id',async(req,res)=>{
-      const id = req.params.id
+    // Return Asset
+    app.patch('/returnupdate/:key',async(req,res)=>{
+      const key = req.params.key;
+      const id = req.body.id
+      console.log('key=>',key,'id=>',id);
       const filter = {
-        _id:new ObjectId(id)
+        _id:new ObjectId(key)
       }
       const query = {
         _id: new ObjectId(id)
@@ -213,13 +219,14 @@ async function run() {
     })
 
     // accept asset request as hr
-    app.patch('/acceptasset/:id',async(req,res)=>{
-      const id = req.params.id;
+    app.patch('/acceptasset/:key',async(req,res)=>{
+      const id = req.params.key;
+      const secid = req.body.id;
       const query = {
-        _id:id
+        _id:new ObjectId(id)
       }
       const filter = {
-        _id : new ObjectId(id)
+        _id : new ObjectId(secid)
       }
       const updataDoc = {
         $set:{
@@ -233,10 +240,11 @@ async function run() {
           requestCount: -1
          }
       }
-      const resultMainAsset = await assetsCollection.updateOne(filter,updateForMainAsset)
-      const result = await requestAssetCollection.updateOne(query,updataDoc)
+      const resultMainAsset = await assetsCollection.updateOne(query,updateForMainAsset)
+        const result = await requestAssetCollection.updateOne(filter,updataDoc)
       res.send(result)
     })
+   
     // Reject reuest as hr
     app.patch('/rejectasset/:id',async(req,res)=>{
       const id = req.params.id;
@@ -249,6 +257,19 @@ async function run() {
         }
       }
       const result = await requestAssetCollection.updateOne(query,updataDoc)
+      res.send(result)
+    })
+
+    // updatarequestCount api
+    app.patch('/updaterequestcount/:key',async(req,res)=>{
+      const id = req.params.key;
+      const query = {
+        _id : new ObjectId(id)
+      }
+      const updateDoc = {
+        $inc:{ requestCount: -1 }
+      }
+      const result = await assetsCollection.updateOne(query,updateDoc)
       res.send(result)
     })
 
@@ -324,6 +345,27 @@ async function run() {
         $inc:{teamMember:-1}
       }
       const result = await usersCollection.updateOne(query,updateDoc)
+      res.send(result)
+    })
+
+    // pic chart api
+    app.get('/returnable-nonreturnable/:email',async(req,res)=>{
+      const email = req.params.email
+      const result = await monthlyAssetRequestCollection.aggregate([{
+        $match:{
+          'assetHolder.email': email
+        }
+      },
+      {
+        $unwind:'$requestDate'
+      },
+        {
+          $group:{
+            _id:"$productType",
+            count:{$sum:1}
+          }
+        }
+      ]).toArray()
       res.send(result)
     })
 
