@@ -167,7 +167,6 @@ async function run() {
       const email = req.params.email;
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
-      console.log(search);
       let query = {}
       
       if(search){
@@ -388,11 +387,33 @@ async function run() {
     // get assets from database
     app.get('/assets/:email',async(req,res)=>{
       const email = req.params.email;
-      const query = {
+      const search = req.query.search;
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      let query = {}
+      
+      if(search){
+        query = {
+          "assetHolder.email":email,
+          productName:{$regex:search , $options:'i'},
+        }
+        const result = await assetsCollection.find(query).toArray()
+        return res.send(result)
+      }
+      query = {
         "assetHolder.email":email
-      } 
-      const result = await assetsCollection.find(query).toArray()
+      }
+      const result = await assetsCollection.find(query).skip(page * size).limit(size).toArray()
       res.send(result)
+    })
+    // asset count
+    app.get('/assetcount/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        'assetHolder.email':email
+      }
+      const count = await assetsCollection.countDocuments(query)
+      res.send({count})
     })
     // asset delete 
     app.delete('/asset/:id',async(req,res)=> {
