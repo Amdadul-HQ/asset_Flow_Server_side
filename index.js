@@ -142,12 +142,37 @@ async function run() {
     // geting requested asset 
     app.get('/requestedasset/:email',async(req,res)=>{
       const email = req.params.email;
+      const search = req.query.search;
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page);
+      let query = {}
+      if(search){
+        query = {
+          'assetHolder.email':email,
+          status:'Requested',
+          email:{$regex:search , $options:'i'},
+        }
+        const result = await requestAssetCollection.find(query).toArray()
+        return res.send(result) 
+      }
+      else{
+        query = {
+          'assetHolder.email':email,
+          status:'Requested',
+        }
+        const result = await requestAssetCollection.find(query).skip(size * page).limit(size).toArray()
+        res.send(result)
+      }
+    })
+    // requested count
+    app.get('/requestedcount/:email',async(req,res)=>{
+      const email = req.params.email;
       const query = {
         'assetHolder.email':email,
         status:'Requested',
       }
-      const result = await requestAssetCollection.find(query).toArray()
-      res.send(result)
+      const count = await requestAssetCollection.countDocuments(query)
+      res.send({count})
     })
 
     // geting pending request as employee
@@ -166,7 +191,7 @@ async function run() {
       const search = req.query.search
       const email = req.params.email;
       const size = parseInt(req.query.size);
-      const page = parseInt(req.query.page) - 1;
+      const page = parseInt(req.query.page) ;
       let query = {}
       
       if(search){
@@ -184,6 +209,14 @@ async function run() {
         const result = await requestAssetCollection.find(query).skip(size * page).limit(size).toArray()
         res.send(result)
       }
+    })
+    app.get('/myteamembercount/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        hremail:email
+      }
+      const count = await companyCollection.countDocuments(query)
+      res.send({count})
     })
   
 
@@ -307,11 +340,22 @@ async function run() {
     // company emplyeee APi
     app.get('/companyemployee/:email',async(req,res)=>{
       const email = req.params.email;
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page);
       const query = {
         hremail:email,
       }
-      const result = await companyCollection.find(query).toArray()
+      const result = await companyCollection.find(query).skip(page * size).limit(size).toArray()
       res.send(result)
+    })
+    // company employee count
+    app.get('/companyemployeecount/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        hremail:email
+      }
+      const count = await companyCollection.countDocuments(query)
+      res.send({count})
     })
 
     //remove from company 
@@ -450,11 +494,21 @@ async function run() {
     })
     // geting normal user
     app.get('/users',async(req,res)=>{
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const query = {
         role:'user'
       }
-      const result = await usersCollection.find(query).toArray()
+      const result = await usersCollection.find(query).skip(page * size).limit(size).toArray()
       res.send(result)
+    })
+    // normal user count
+    app.get('/userscount',async(req,res)=>{
+      const query = {
+        role:'user'
+      }
+      const count = await usersCollection.countDocuments(query)
+      res.send({count})
     })
 
     // logout 
