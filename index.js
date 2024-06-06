@@ -113,7 +113,7 @@ async function run() {
 
 
     // post on requested Asset
-    app.post('/requestasset',async(req,res)=>{
+    app.post('/requestasset',verifyToken,async(req,res)=>{
       const requestAsset = req.body;
       const id = requestAsset.key;
       const query = {
@@ -187,13 +187,30 @@ async function run() {
     })
 
     // geting asset for the employee
-    app.get('/assetsofemploye/:email',async(req,res)=>{
-      const search = req.query.search
+    app.get('/assetsofemploye/:email',verifyToken,async(req,res)=>{
+      const search = req.query.search;
+      const status = req.query.status;
+      const type = req.query.type;
       const email = req.params.email;
       const size = parseInt(req.query.size);
-      const page = parseInt(req.query.page) ;
+      const page = parseInt(req.query.page);
       let query = {}
-      
+      if(type){
+        query = {
+          email:email,
+          productType:type
+        }
+        const result = await requestAssetCollection.find(query).toArray()
+        return res.send(result)
+      }
+      if(status){
+        query = {
+          email:email,
+          status:status
+        }
+        const result = await requestAssetCollection.find(query).toArray()
+        return res.send(result)
+      }
       if(search){
         query = {
           email:email,
@@ -218,10 +235,18 @@ async function run() {
       const count = await companyCollection.countDocuments(query)
       res.send({count})
     })
+    app.get('/assetofemployecount/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email:email
+      }
+      const count = await requestAssetCollection.countDocuments(query)
+      res.send({count})
+    })
   
 
     // deleting asset as employee
-    app.delete('/assetsofemploye/:id',async(req,res)=>{
+    app.delete('/assetsofemploye/:id',verifyToken,async(req,res)=>{
       const id = req.params.id
       const query = {
         _id: new ObjectId(id)
@@ -231,7 +256,7 @@ async function run() {
     })
 
     // Return Asset
-    app.patch('/returnupdate/:key',async(req,res)=>{
+    app.patch('/returnupdate/:key',verifyToken,async(req,res)=>{
       const key = req.params.key;
       const id = req.body.id
       console.log('key=>',key,'id=>',id);
@@ -293,7 +318,7 @@ async function run() {
     })
 
     // updatarequestCount api
-    app.patch('/updaterequestcount/:key',async(req,res)=>{
+    app.patch('/updaterequestcount/:key',verifyToken,async(req,res)=>{
       const id = req.params.key;
       const query = {
         _id : new ObjectId(id)
@@ -338,7 +363,7 @@ async function run() {
       res.send({result,updateUser})
     })
     // company emplyeee APi
-    app.get('/companyemployee/:email',async(req,res)=>{
+    app.get('/companyemployee/:email',verifyToken,async(req,res)=>{
       const email = req.params.email;
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page);
@@ -349,7 +374,7 @@ async function run() {
       res.send(result)
     })
     // company employee count
-    app.get('/companyemployeecount/:email',async(req,res)=>{
+    app.get('/companyemployeecount/:email',verifyToken,async(req,res)=>{
       const email = req.params.email;
       const query = {
         hremail:email
@@ -359,7 +384,7 @@ async function run() {
     })
 
     //remove from company 
-    app.delete('/employee/:id',async(req,res)=>{
+    app.delete('/employee/:id',verifyToken,async(req,res)=>{
       const id = req.params.id
       console.log(req.body);
       const filter = {
@@ -379,7 +404,7 @@ async function run() {
       const result = await companyCollection.deleteOne(query)
       res.send({result})
     })
-    app.patch('/updateteamcount/:email',async(req,res)=>{
+    app.patch('/updateteamcount/:email',verifyToken,async(req,res)=>{
       const email = req.params.email;
       const query = {
         email:email
@@ -392,7 +417,7 @@ async function run() {
     })
 
     // pic chart api
-    app.get('/returnable-nonreturnable/:email',async(req,res)=>{
+    app.get('/returnable-nonreturnable/:email',verifyToken,async(req,res)=>{
       const email = req.params.email
       const result = await monthlyAssetRequestCollection.aggregate([{
         $match:{
@@ -423,19 +448,45 @@ async function run() {
     })
 
     // save an asset in database
-    app.post('/addasset',async(req,res)=> {
+    app.post('/addasset',verifyToken,async(req,res)=> {
       const asset = req.body;
       const result = await assetsCollection.insertOne(asset)
       res.send(result)
     })
     // get assets from database
-    app.get('/assets/:email',async(req,res)=>{
+    app.get('/assets/:email',verifyToken,async(req,res)=>{
       const email = req.params.email;
       const search = req.query.search;
+      const quantity = parseInt(req.query.quantity);
+      const type = req.query.type;
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       let query = {}
+      if(quantity == 1){
+        query = {
+          "assetHolder.email":email,
+          productQuantity:{ $gt: 0 }
+        }
+        const result = await assetsCollection.find(query).toArray()
+        return res.send(result)
+      }
+      if(quantity == 0){
+        query = {
+          "assetHolder.email":email,
+          productQuantity: 0,
+        }
+        const result = await assetsCollection.find(query).toArray()
+        return res.send(result)
+      }
       
+      if(type){
+        query = {
+          "assetHolder.email":email,
+          productType:type,
+        }
+        const result = await assetsCollection.find(query).toArray()
+        return res.send(result)
+      }
       if(search){
         query = {
           "assetHolder.email":email,
@@ -460,7 +511,7 @@ async function run() {
       res.send({count})
     })
     // asset delete 
-    app.delete('/asset/:id',async(req,res)=> {
+    app.delete('/asset/:id',verifyToken,async(req,res)=> {
       const id = req.params.id;
       console.log(id);
       const query = {
@@ -470,7 +521,7 @@ async function run() {
       res.send(result)
     })
     // update asset api
-    app.get('/asset/:id',async(req,res)=> {
+    app.get('/asset/:id',verifyToken,async(req,res)=> {
       const id = req.params.id
       const query = {
         _id: new ObjectId(id),
@@ -478,7 +529,7 @@ async function run() {
       const result = await assetsCollection.findOne(query)
       res.send(result)
     })
-    app.patch('/updateasset/:id',async(req,res)=>{
+    app.patch('/updateasset/:id',verifyToken,async(req,res)=>{
       const id = req.params.id
       const query = {
         _id : new ObjectId(id)
@@ -493,7 +544,7 @@ async function run() {
       res.send(result)
     })
     // geting normal user
-    app.get('/users',async(req,res)=>{
+    app.get('/users',verifyToken,async(req,res)=>{
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const query = {
@@ -503,7 +554,7 @@ async function run() {
       res.send(result)
     })
     // normal user count
-    app.get('/userscount',async(req,res)=>{
+    app.get('/userscount',verifyToken,async(req,res)=>{
       const query = {
         role:'user'
       }
@@ -511,44 +562,9 @@ async function run() {
       res.send({count})
     })
 
-    // logout 
-    // app.get("/logout", async (req, res) => {
-    //     try {
-    //       res
-    //         .clearCookie("token", {
-    //           maxAge: 0,
-    //           secure: process.env.NODE_ENV === "production",
-    //           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-    //         })
-    //         .send({ success: true });
-    //     } catch (err) {
-    //       res.status(500).send(err);
-    //     }
-    //   });
-
-    // save a hr in data base
-    // app.put('/hrmanager',async(req,res)=> {
-    //   const hr = req.body;
-    //   const option = {upsert:true};
-    //   const query = {
-    //     email:hr?.email
-    //   }
-    //   const isExist = await hrCollection.findOne(query)
-    //   if(isExist){
-    //     return isExist
-    //   }
-    //   else{
-    //     const result = await hrCollection.insertOne(hr)
-    //     res.send(result)
-    //   }
-    // })
-
     // hr get
     app.get('/hrmanager/:email',async(req,res)=>{
       const email = req.params.email;
-      // if(email !== req.decode.email){
-      //   return res.status(403).send({message:'Unauthorized Access'})
-      // }
       const query = {
         email:email
       }
