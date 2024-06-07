@@ -42,12 +42,10 @@ async function run() {
     const paymentsCollection = client.db("assetFlow").collection("payments");
     
     const verifyToken = (req,res,next) => {
-      console.log('inside verifyToken',req.headers);
       if(!req.headers.authorization){
         res.status(403).send({message:'Forbidden Access'})
       }
       const token = req.headers.authorization.split(' ')[1]
-      console.log('inside veryfiy token barear',token);
       jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(error,decode)=>{
         if(error){
           return res.status(403).send({message:'Forbidden Access'})
@@ -277,7 +275,6 @@ async function run() {
     app.patch('/returnupdate/:key',verifyToken,verifyEmployee,async(req,res)=>{
       const key = req.params.key;
       const id = req.body.id
-      console.log('key=>',key,'id=>',id);
       const filter = {
         _id:new ObjectId(key)
       }
@@ -404,7 +401,6 @@ async function run() {
     //remove from company 
     app.delete('/employee/:id',verifyToken,verifyHr,async(req,res)=>{
       const id = req.params.id
-      console.log(req.body);
       const filter = {
        _id : new ObjectId(id)
       }
@@ -531,7 +527,6 @@ async function run() {
     // asset delete 
     app.delete('/asset/:id',verifyToken,verifyHr,async(req,res)=> {
       const id = req.params.id;
-      console.log(id);
       const query = {
         _id: new ObjectId(id),
       };
