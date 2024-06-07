@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const app = express();
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: ["http://localhost:5173", "http://localhost:5174","https://assetflow-2ac74.web.app","https://assetflow-2ac74.firebaseapp.com"],
   optionSuccessStatus: 200,
 };
 
@@ -110,9 +110,6 @@ async function run() {
       res.send(package)
     })
 
-
-
-
     app.post("/create-payment-intent", async (req, res) => {
       const price = req.body.price;
       const priecInCent = parseFloat(price * 100)
@@ -149,7 +146,7 @@ async function run() {
       res.send(result)
     })
     // only month request asset
-    app.get('/monthrequestasset/:email',verifyToken,async(req,res)=>{
+    app.get('/monthrequestasset/:email',async(req,res)=>{
       const email = req.params.email;
       const query = {
         email:email,
@@ -161,7 +158,7 @@ async function run() {
     })
 
     // geting requested asset 
-    app.get('/requestedasset/:email',verifyToken,verifyHr,async(req,res)=>{
+    app.get('/requestedasset/:email',async(req,res)=>{
       const email = req.params.email;
       const search = req.query.search;
       const size = parseInt(req.query.size);
@@ -197,7 +194,7 @@ async function run() {
     })
 
     // geting pending request as employee
-    app.get('/pendingasset/:email',verifyToken,verifyEmployee,async(req,res)=>{
+    app.get('/pendingasset/:email',async(req,res)=>{
       const email = req.params.email;
       const query = {
         email:email,
@@ -438,7 +435,7 @@ async function run() {
     })
 
     // pic chart api
-    app.get('/returnable-nonreturnable/:email',verifyToken,async(req,res)=>{
+    app.get('/returnable-nonreturnable/:email',async(req,res)=>{
       const email = req.params.email
       const result = await monthlyAssetRequestCollection.aggregate([{
         $match:{
@@ -475,7 +472,7 @@ async function run() {
       res.send(result)
     })
     // get assets from database
-    app.get('/assets/:email',verifyToken,async(req,res)=>{
+    app.get('/assets/:email',async(req,res)=>{
       const email = req.params.email;
       const search = req.query.search;
       const quantity = parseInt(req.query.quantity);
