@@ -52,9 +52,30 @@ async function run() {
         if(error){
           return res.status(403).send({message:'Forbidden Access'})
         }
-        req.decode = decode
+        req.decoded = decode
         next()
       })
+    }
+
+    const verifyHr = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isHr = user?.role === 'hr';
+      if (!isHr) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+    const verifyEmployee = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isEmployee = user?.role === 'employee';
+      if (!isEmployee) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
     }
     // jwt
     app.post('/jwt',async(req,res)=>{
@@ -63,7 +84,7 @@ async function run() {
       res.send({token})
     })
     // save payment data
-    app.post('/payments',async(req,res)=>{
+    app.post('/payments',verifyToken,verifyHr,async(req,res)=>{
       const paymentDetails = req.body;
       const email = paymentDetails.email
       const packageName = paymentDetails.name
@@ -113,7 +134,7 @@ async function run() {
 
 
     // post on requested Asset
-    app.post('/requestasset',verifyToken,async(req,res)=>{
+    app.post('/requestasset',verifyToken,verifyEmployee,async(req,res)=>{
       const requestAsset = req.body;
       const id = requestAsset.key;
       const query = {
@@ -128,7 +149,7 @@ async function run() {
       res.send(result)
     })
     // only month request asset
-    app.get('/monthrequestasset/:email',async(req,res)=>{
+    app.get('/monthrequestasset/:email',verifyToken,async(req,res)=>{
       const email = req.params.email;
       const query = {
         email:email,
@@ -140,7 +161,7 @@ async function run() {
     })
 
     // geting requested asset 
-    app.get('/requestedasset/:email',async(req,res)=>{
+    app.get('/requestedasset/:email',verifyToken,verifyHr,async(req,res)=>{
       const email = req.params.email;
       const search = req.query.search;
       const size = parseInt(req.query.size);
@@ -165,7 +186,7 @@ async function run() {
       }
     })
     // requested count
-    app.get('/requestedcount/:email',async(req,res)=>{
+    app.get('/requestedcount/:email',verifyToken,async(req,res)=>{
       const email = req.params.email;
       const query = {
         'assetHolder.email':email,
@@ -176,7 +197,7 @@ async function run() {
     })
 
     // geting pending request as employee
-    app.get('/pendingasset/:email',async(req,res)=>{
+    app.get('/pendingasset/:email',verifyToken,verifyEmployee,async(req,res)=>{
       const email = req.params.email;
       const query = {
         email:email,
@@ -187,7 +208,7 @@ async function run() {
     })
 
     // geting asset for the employee
-    app.get('/assetsofemploye/:email',verifyToken,async(req,res)=>{
+    app.get('/assetsofemploye/:email',verifyToken,verifyEmployee,async(req,res)=>{
       const search = req.query.search;
       const status = req.query.status;
       const type = req.query.type;
@@ -227,7 +248,7 @@ async function run() {
         res.send(result)
       }
     })
-    app.get('/myteamembercount/:email',async(req,res)=>{
+    app.get('/myteamembercount/:email',verifyToken,verifyEmployee,async(req,res)=>{
       const email = req.params.email;
       const query = {
         hremail:email
@@ -246,7 +267,7 @@ async function run() {
   
 
     // deleting asset as employee
-    app.delete('/assetsofemploye/:id',verifyToken,async(req,res)=>{
+    app.delete('/assetsofemploye/:id',verifyToken,verifyEmployee,async(req,res)=>{
       const id = req.params.id
       const query = {
         _id: new ObjectId(id)
@@ -256,7 +277,7 @@ async function run() {
     })
 
     // Return Asset
-    app.patch('/returnupdate/:key',verifyToken,async(req,res)=>{
+    app.patch('/returnupdate/:key',verifyToken,verifyEmployee,async(req,res)=>{
       const key = req.params.key;
       const id = req.body.id
       console.log('key=>',key,'id=>',id);
@@ -276,7 +297,7 @@ async function run() {
     })
 
     // accept asset request as hr
-    app.patch('/acceptasset/:key',async(req,res)=>{
+    app.patch('/acceptasset/:key',verifyToken,verifyHr,async(req,res)=>{
       const id = req.params.key;
       const secid = req.body.id;
       const query = {
@@ -303,7 +324,7 @@ async function run() {
     })
    
     // Reject reuest as hr
-    app.patch('/rejectasset/:id',async(req,res)=>{
+    app.patch('/rejectasset/:id',verifyToken,verifyHr,async(req,res)=>{
       const id = req.params.id;
       const query = {
         _id:id
@@ -318,7 +339,7 @@ async function run() {
     })
 
     // updatarequestCount api
-    app.patch('/updaterequestcount/:key',verifyToken,async(req,res)=>{
+    app.patch('/updaterequestcount/:key',verifyToken,verifyEmployee,async(req,res)=>{
       const id = req.params.key;
       const query = {
         _id : new ObjectId(id)
@@ -333,7 +354,7 @@ async function run() {
  
 
     // post a user into a company
-    app.post('/addtocompany',async(req,res)=>{
+    app.post('/addtocompany',verifyToken,verifyHr,async(req,res)=>{
       const employeeDetails = req.body
       const id = employeeDetails?._id;
       const hremail = employeeDetails?.hremail;
@@ -384,7 +405,7 @@ async function run() {
     })
 
     //remove from company 
-    app.delete('/employee/:id',verifyToken,async(req,res)=>{
+    app.delete('/employee/:id',verifyToken,verifyHr,async(req,res)=>{
       const id = req.params.id
       console.log(req.body);
       const filter = {
@@ -404,7 +425,7 @@ async function run() {
       const result = await companyCollection.deleteOne(query)
       res.send({result})
     })
-    app.patch('/updateteamcount/:email',verifyToken,async(req,res)=>{
+    app.patch('/updateteamcount/:email',verifyToken,verifyHr,async(req,res)=>{
       const email = req.params.email;
       const query = {
         email:email
@@ -511,7 +532,7 @@ async function run() {
       res.send({count})
     })
     // asset delete 
-    app.delete('/asset/:id',verifyToken,async(req,res)=> {
+    app.delete('/asset/:id',verifyToken,verifyHr,async(req,res)=> {
       const id = req.params.id;
       console.log(id);
       const query = {
@@ -529,7 +550,7 @@ async function run() {
       const result = await assetsCollection.findOne(query)
       res.send(result)
     })
-    app.patch('/updateasset/:id',verifyToken,async(req,res)=>{
+    app.patch('/updateasset/:id',verifyToken,verifyHr,async(req,res)=>{
       const id = req.params.id
       const query = {
         _id : new ObjectId(id)
@@ -544,7 +565,7 @@ async function run() {
       res.send(result)
     })
     // geting normal user
-    app.get('/users',verifyToken,async(req,res)=>{
+    app.get('/users',verifyToken,verifyHr,async(req,res)=>{
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const query = {
@@ -596,10 +617,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
